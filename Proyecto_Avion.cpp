@@ -1,47 +1,40 @@
 #include <iostream>
 #include <string>
-#include <stdexcept>
-#include <iomanip>
-#include <thread>
+#include <random>
 #include <chrono>
+#include <thread>
+#include <stdexcept>
+#include <limits>
+#include <iomanip>
 
 using namespace std;
 
-/*
-===========================================================
- SISTEMA DE DETECCION, ALARMA Y EXTINCION AUTOMATICA
- DE INCENDIOS EN EL MOTOR DE UNA AERONAVE
 
- ELEMENTOS DE PROGRAMACION:
- 1. Programacion Orientada a Objetos
- 2. Clases y objetos
- 3. Sobrecarga de operadores
- 4. Excepciones
- 5. Estructura lineal: Lista Enlazada
- 6. Arreglos como conjuntos
- 7. Operaciones de conjuntos:
-      - Pertenencia
-      - Union
-      - Interseccion
-      - Diferencia
+namespace Configuracion
+{
+    const double TEMPERATURA_TOLERANCIA = 80.0;
 
- LOGICA DEL PROYECTO:
- LOOP A = sensores de temperatura
- LOOP B = sensores de flama
+    const double TEMPERATURA_MINIMA = 60.0;
+    const double TEMPERATURA_MAXIMA = 100.0;
 
- NORMAL:
- A = 0 y B = 0
+    const int TIEMPO_VERIFICACION = 3;
 
- ADVERTENCIA:
- A = 1 y B = 0
+    const int MAX_ELEMENTOS_CONJUNTO = 20;
+}
 
- EMERGENCIA:
- A = 1 y B = 1
 
- DISCREPANCIA:
- A = 0 y B = 1
-===========================================================
-*/
+namespace Interfaz
+{
+    const string RESET = "\033[0m";
+    const string ROJO = "\033[31m";
+    const string VERDE = "\033[32m";
+    const string AMARILLO = "\033[33m";
+    const string AZUL = "\033[34m";
+    const string MAGENTA = "\033[35m";
+    const string CYAN = "\033[36m";
+    const string BLANCO = "\033[37m";
+    const string NEGRITA = "\033[1m";
+}
 
 
 
@@ -51,8 +44,9 @@ private:
     string mensaje;
 
 public:
-    ExcepcionSistema(const string& msg)
-        : mensaje(msg)
+
+    explicit ExcepcionSistema(const string& mensaje)
+        : mensaje(mensaje)
     {
     }
 
@@ -67,37 +61,30 @@ public:
 class Sensor
 {
 protected:
+
     int id;
     string nombre;
-    bool activo;
     bool operativo;
 
 public:
-    Sensor(int id = 0, string nombre = "")
-    {
-        this->id = id;
-        this->nombre = nombre;
-        activo = false;
-        operativo = true;
-    }
 
-    virtual ~Sensor()
+    Sensor(int id, const string& nombre)
+        : id(id),
+          nombre(nombre),
+          operativo(true)
     {
     }
 
-    int getId() const
+    virtual ~Sensor() = default;
+
+    int obtenerId() const
     {
         return id;
     }
 
-    string getNombre() const
+    string obtenerNombre() const
     {
         return nombre;
-    }
-
-    bool estaActivo() const
-    {
-        return activo;
     }
 
     bool estaOperativo() const
@@ -105,136 +92,165 @@ public:
         return operativo;
     }
 
-    void establecerFalla(bool falla)
-    {
-        operativo = !falla;
-
-        if (falla)
-        {
-            activo = false;
-        }
-    }
-
     virtual void mostrar() const = 0;
 };
-
 
 
 class SensorTemperatura : public Sensor
 {
 private:
+
     double temperatura;
 
 public:
-    SensorTemperatura(int id, string nombre)
-        : Sensor(id, nombre)
+
+    explicit SensorTemperatura(int id)
+        : Sensor(id, "Sensor de temperatura"),
+          temperatura(0.0)
     {
-        temperatura = 0;
     }
 
-    void establecerTemperatura(double valor, double umbral)
+    void establecerTemperatura(double valor)
     {
-        if (valor < -100 || valor > 1000)
+        if (valor < -100.0 || valor > 1000.0)
         {
             throw ExcepcionSistema(
-                "Temperatura fuera del rango permitido para la simulacion."
+                "Lectura de temperatura fuera del rango permitido."
             );
         }
 
         temperatura = valor;
-
-        if (operativo)
-        {
-            activo = temperatura >= umbral;
-        }
     }
 
-    double getTemperatura() const
+    double obtenerTemperatura() const
     {
         return temperatura;
     }
 
+    bool superaTolerancia(double tolerancia) const
+    {
+        return temperatura > tolerancia;
+    }
+
     void mostrar() const override
     {
-        cout << nombre
-             << " | Temperatura: "
+        cout << fixed << setprecision(1)
+             << "Sensor " << id
+             << "  |  "
              << temperatura
-             << " C"
-             << " | Estado: "
-             << (activo ? "ACTIVO" : "NORMAL")
-             << " | Operativo: "
-             << (operativo ? "SI" : "NO")
-             << endl;
-    }
-};
+             << " °C";
 
-
-
-class SensorFlama : public Sensor
-{
-private:
-    bool detectaFlama;
-
-public:
-    SensorFlama(int id, string nombre)
-        : Sensor(id, nombre)
-    {
-        detectaFlama = false;
-    }
-
-    void establecerDeteccion(bool deteccion)
-    {
-        detectaFlama = deteccion;
-
-        if (operativo)
+        if (temperatura > Configuracion::TEMPERATURA_TOLERANCIA)
         {
-            activo = detectaFlama;
+            cout << "  |  SOBRE TOLERANCIA";
+        }
+        else
+        {
+            cout << "  |  NORMAL";
         }
     }
-
-    bool getDeteccion() const
-    {
-        return detectaFlama;
-    }
-
-    void mostrar() const override
-    {
-        cout << nombre
-             << " | Flama: "
-             << (detectaFlama ? "DETECTADA" : "NO DETECTADA")
-             << " | Estado: "
-             << (activo ? "ACTIVO" : "NORMAL")
-             << " | Operativo: "
-             << (operativo ? "SI" : "NO")
-             << endl;
-    }
 };
 
 
-// ========================================================
-// CLASE CONJUNTO
-//
-// Se utiliza un arreglo para representar un conjunto.
-// Incluye:
-// - Pertenencia
-// - Union
-// - Interseccion
-// - Diferencia
-//
-// Tambien se utiliza SOBRECARGA DE OPERADORES:
-// +  = union
-// &  = interseccion
-// -  = diferencia
-// ========================================================
+class Loop
+{
+private:
+
+    string nombre;
+    int sensor1;
+    int sensor2;
+    bool activo;
+
+public:
+
+    Loop(
+        const string& nombre,
+        int sensor1,
+        int sensor2
+    )
+        : nombre(nombre),
+          sensor1(sensor1),
+          sensor2(sensor2),
+          activo(false)
+    {
+    }
+
+    void establecerEstado(bool estado)
+    {
+        activo = estado;
+    }
+
+    bool estaActivo() const
+    {
+        return activo;
+    }
+
+    string obtenerNombre() const
+    {
+        return nombre;
+    }
+
+    int obtenerSensor1() const
+    {
+        return sensor1;
+    }
+
+    int obtenerSensor2() const
+    {
+        return sensor2;
+    }
+
+    
+
+    bool operator==(const Loop& otro) const
+    {
+        return nombre == otro.nombre &&
+               sensor1 == otro.sensor1 &&
+               sensor2 == otro.sensor2;
+    }
+
+    void mostrar() const
+    {
+        cout << nombre << " : ";
+
+        if (activo)
+        {
+            cout << Interfaz::ROJO
+                 << "ACTIVO"
+                 << Interfaz::RESET;
+        }
+        else
+        {
+            cout << Interfaz::VERDE
+                 << "NORMAL"
+                 << Interfaz::RESET;
+        }
+
+        cout << endl;
+
+        cout << "       Sensores asociados: "
+             << sensor1 << " y "
+             << sensor2 << endl;
+    }
+};
+
 
 class Conjunto
 {
 private:
-    static const int MAX = 20;
-    int elementos[MAX];
+
+    int elementos[Configuracion::MAX_ELEMENTOS_CONJUNTO];
     int cantidad;
 
-    bool contieneInterno(int valor) const
+public:
+
+    Conjunto()
+        : cantidad(0)
+    {
+    }
+
+
+    bool pertenece(int valor) const
     {
         for (int i = 0; i < cantidad; i++)
         {
@@ -247,43 +263,30 @@ private:
         return false;
     }
 
-public:
-    Conjunto()
-    {
-        cantidad = 0;
-    }
 
     void agregar(int valor)
     {
-        if (cantidad >= MAX)
+        if (cantidad >= Configuracion::MAX_ELEMENTOS_CONJUNTO)
         {
             throw ExcepcionSistema(
-                "El conjunto alcanzo su capacidad maxima."
+                "Se alcanzo el limite maximo del conjunto."
             );
         }
 
-        if (!contieneInterno(valor))
+        if (!pertenece(valor))
         {
             elementos[cantidad] = valor;
             cantidad++;
         }
     }
 
-    // PERTENENCIA
-    bool pertenece(int valor) const
-    {
-        return contieneInterno(valor);
-    }
-
+    // --------------------------------------------------------------
     // UNION
+    // --------------------------------------------------------------
+
     Conjunto unionCon(const Conjunto& otro) const
     {
-        Conjunto resultado;
-
-        for (int i = 0; i < cantidad; i++)
-        {
-            resultado.agregar(elementos[i]);
-        }
+        Conjunto resultado = *this;
 
         for (int i = 0; i < otro.cantidad; i++)
         {
@@ -293,7 +296,6 @@ public:
         return resultado;
     }
 
-    // INTERSECCION
     Conjunto interseccionCon(const Conjunto& otro) const
     {
         Conjunto resultado;
@@ -309,7 +311,7 @@ public:
         return resultado;
     }
 
-    // DIFERENCIA
+
     Conjunto diferenciaCon(const Conjunto& otro) const
     {
         Conjunto resultado;
@@ -325,26 +327,25 @@ public:
         return resultado;
     }
 
-    // SOBRECARGA DE OPERADOR +
-    // Representa la UNION
+
+    // + = UNION
     Conjunto operator+(const Conjunto& otro) const
     {
         return unionCon(otro);
     }
 
-    // SOBRECARGA DE OPERADOR &
-    // Representa la INTERSECCION
+    // & = INTERSECCION
     Conjunto operator&(const Conjunto& otro) const
     {
         return interseccionCon(otro);
     }
 
-    // SOBRECARGA DE OPERADOR -
-    // Representa la DIFERENCIA
+    // - = DIFERENCIA
     Conjunto operator-(const Conjunto& otro) const
     {
         return diferenciaCon(otro);
     }
+
 
     void mostrar() const
     {
@@ -360,1140 +361,929 @@ public:
             }
         }
 
-        cout << " }" << endl;
+        cout << " }";
     }
 };
 
-
-// ========================================================
-// NODO DE LISTA ENLAZADA
-// ========================================================
 
 class Nodo
 {
 public:
+
     string dato;
     Nodo* siguiente;
 
-    Nodo(string dato)
+    explicit Nodo(const string& dato)
+        : dato(dato),
+          siguiente(nullptr)
     {
-        this->dato = dato;
-        siguiente = nullptr;
     }
 };
 
 
-// ========================================================
-// LISTA ENLAZADA
-//
-// Se utiliza para almacenar el historial de eventos
-// del sistema.
-// ========================================================
-
 class ListaEnlazada
 {
 private:
+
     Nodo* cabeza;
 
 public:
+
     ListaEnlazada()
+        : cabeza(nullptr)
     {
-        cabeza = nullptr;
     }
 
     ~ListaEnlazada()
     {
-        limpiar();
+        Nodo* actual = cabeza;
+
+        while (actual != nullptr)
+        {
+            Nodo* temporal = actual;
+
+            actual = actual->siguiente;
+
+            delete temporal;
+        }
     }
 
-    void agregar(string dato)
+
+    void insertar(const string& dato)
     {
         Nodo* nuevo = new Nodo(dato);
 
         if (cabeza == nullptr)
         {
             cabeza = nuevo;
+            return;
         }
-        else
+
+        Nodo* actual = cabeza;
+
+        while (actual->siguiente != nullptr)
         {
-            Nodo* actual = cabeza;
-
-            while (actual->siguiente != nullptr)
-            {
-                actual = actual->siguiente;
-            }
-
-            actual->siguiente = nuevo;
+            actual = actual->siguiente;
         }
+
+        actual->siguiente = nuevo;
     }
+
 
     void mostrar() const
     {
         if (cabeza == nullptr)
         {
-            cout << "No hay eventos registrados." << endl;
+            cout << "No existen eventos registrados.\n";
             return;
         }
 
         Nodo* actual = cabeza;
+
         int contador = 1;
 
         while (actual != nullptr)
         {
-            cout << contador
+            cout << "  "
+                 << contador
                  << ". "
                  << actual->dato
                  << endl;
 
             actual = actual->siguiente;
+
             contador++;
         }
     }
-
-    void limpiar()
-    {
-        Nodo* actual = cabeza;
-
-        while (actual != nullptr)
-        {
-            Nodo* siguiente = actual->siguiente;
-            delete actual;
-            actual = siguiente;
-        }
-
-        cabeza = nullptr;
-    }
 };
 
 
-// ========================================================
-// CLASE LOOP
-//
-// Representa cada uno de los dos loops del sistema.
-// ========================================================
 
-class Loop
+class Deteccion
 {
 private:
-    string nombre;
-    bool activo;
+
+   
+    SensorTemperatura sensor1;
+    SensorTemperatura sensor2;
+
+
+
+    SensorTemperatura sensor3;
+    SensorTemperatura sensor4;
+
+    Loop loopA;
+    Loop loopB;
+
+    double temperaturaTolerancia;
+
+    random_device dispositivoAleatorio;
+    mt19937 generador;
+
+    uniform_real_distribution<double>
+        distribucionTemperatura;
 
 public:
-    Loop(string nombre)
+
+    explicit Deteccion(double tolerancia)
+        : sensor1(1),
+          sensor2(2),
+          sensor3(3),
+          sensor4(4),
+
+          loopA("LOOP A", 1, 2),
+          loopB("LOOP B", 3, 4),
+
+          temperaturaTolerancia(tolerancia),
+
+          generador(dispositivoAleatorio()),
+
+          distribucionTemperatura(
+              Configuracion::TEMPERATURA_MINIMA,
+              Configuracion::TEMPERATURA_MAXIMA
+          )
     {
-        this->nombre = nombre;
-        activo = false;
+        if (tolerancia <= 0)
+        {
+            throw ExcepcionSistema(
+                "La temperatura de tolerancia debe ser mayor que cero."
+            );
+        }
     }
 
-    void establecerEstado(bool estado)
+    void generarLecturas()
     {
-        activo = estado;
+        sensor1.establecerTemperatura(
+            distribucionTemperatura(generador)
+        );
+
+        sensor2.establecerTemperatura(
+            distribucionTemperatura(generador)
+        );
+
+        sensor3.establecerTemperatura(
+            distribucionTemperatura(generador)
+        );
+
+        sensor4.establecerTemperatura(
+            distribucionTemperatura(generador)
+        );
     }
 
-    bool estaActivo() const
+
+    void evaluarLoops()
     {
-        return activo;
+        bool s1 =
+            sensor1.superaTolerancia(
+                temperaturaTolerancia
+            );
+
+        bool s2 =
+            sensor2.superaTolerancia(
+                temperaturaTolerancia
+            );
+
+        bool s3 =
+            sensor3.superaTolerancia(
+                temperaturaTolerancia
+            );
+
+        bool s4 =
+            sensor4.superaTolerancia(
+                temperaturaTolerancia
+            );
+
+
+        loopA.establecerEstado(
+            s1 && s2
+        );
+
+        loopB.establecerEstado(
+            s3 && s4
+        );
     }
 
-    string getNombre() const
+    bool loopAActivo() const
     {
-        return nombre;
+        return loopA.estaActivo();
     }
 
-    // SOBRECARGA DE OPERADOR ==
-    bool operator==(const Loop& otro) const
+
+    bool loopBActivo() const
     {
-        return activo == otro.activo;
+        return loopB.estaActivo();
+    }
+
+
+    void mostrarLecturas() const
+    {
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "              MONITOREO DEL MOTOR\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
+
+        cout << "Temperatura de tolerancia: "
+             << temperaturaTolerancia
+             << " °C\n\n";
+
+        sensor1.mostrar();
+        cout << endl;
+
+        sensor2.mostrar();
+        cout << endl;
+
+        sensor3.mostrar();
+        cout << endl;
+
+        sensor4.mostrar();
+        cout << endl;
+    }
+
+    void mostrarLoops() const
+    {
+        cout << "\n";
+        cout << "Estado de los loops:\n";
+
+        loopA.mostrar();
+        loopB.mostrar();
+    }
+
+
+    Conjunto obtenerConjuntoLoopA() const
+    {
+        Conjunto A;
+
+        A.agregar(1);
+        A.agregar(2);
+
+        return A;
+    }
+
+
+    Conjunto obtenerConjuntoLoopB() const
+    {
+        Conjunto B;
+
+        B.agregar(3);
+        B.agregar(4);
+
+        return B;
     }
 };
 
 
-// ========================================================
-// CLASE SISTEMA CONTRA INCENDIOS
-// ========================================================
+
+class Extincion
+{
+private:
+
+    bool botella1Disponible;
+    bool botella2Disponible;
+
+    bool botella1Activada;
+    bool botella2Activada;
+
+public:
+
+    Extincion()
+        : botella1Disponible(true),
+          botella2Disponible(true),
+          botella1Activada(false),
+          botella2Activada(false)
+    {
+    }
+
+
+    void activarBotella1()
+    {
+        if (!botella1Disponible)
+        {
+            throw ExcepcionSistema(
+                "La botella 1 ya fue utilizada."
+            );
+        }
+
+        botella1Disponible = false;
+        botella1Activada = true;
+    }
+
+
+    void activarBotella2()
+    {
+        if (!botella2Disponible)
+        {
+            throw ExcepcionSistema(
+                "La botella 2 ya fue utilizada."
+            );
+        }
+
+        botella2Disponible = false;
+        botella2Activada = true;
+    }
+
+    bool botella1DisponibleEstado() const
+    {
+        return botella1Disponible;
+    }
+
+    bool botella2DisponibleEstado() const
+    {
+        return botella2Disponible;
+    }
+
+
+    void mostrarEstado() const
+    {
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "              SISTEMA DE EXTINCION\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
+
+        cout << "Botella 1: ";
+
+        if (botella1Disponible)
+        {
+            cout << Interfaz::VERDE
+                 << "DISPONIBLE"
+                 << Interfaz::RESET;
+        }
+        else
+        {
+            cout << Interfaz::ROJO
+                 << "UTILIZADA"
+                 << Interfaz::RESET;
+        }
+
+        cout << endl;
+
+        cout << "Botella 2: ";
+
+        if (botella2Disponible)
+        {
+            cout << Interfaz::VERDE
+                 << "DISPONIBLE"
+                 << Interfaz::RESET;
+        }
+        else
+        {
+            cout << Interfaz::ROJO
+                 << "UTILIZADA"
+                 << Interfaz::RESET;
+        }
+
+        cout << endl;
+    }
+};
+
+
+enum class EstadoSistema
+{
+    NORMAL,
+    ADVERTENCIA,
+    DISCREPANCIA,
+    EMERGENCIA
+};
+
 
 class SistemaContraIncendios
 {
 private:
 
-
-    SensorTemperatura sensorTemp1;
-    SensorTemperatura sensorTemp2;
-
-    SensorFlama sensorFlama1;
-    SensorFlama sensorFlama2;
-
-
-
-    Loop loopA;
-    Loop loopB;
-
-
-
-    bool bombaCombustible;
-    bool valvulaCombustible;
-
-    bool valvulaExtintor1;
-    bool valvulaExtintor2;
-
-    bool buzzer;
-
-    bool ledVerde;
-    bool ledAmarillo;
-    bool ledRojo;
-
-
-
-    string mensajeLCD;
-
-
-
-    string estadoSistema;
-
-    bool necesitaReset;
-
-    double umbralTemperatura;
-
+    Deteccion deteccion;
+    Extincion extincion;
 
     ListaEnlazada historial;
 
-
-
-    Conjunto conjuntoLoopA;
-    Conjunto conjuntoLoopB;
-
+    EstadoSistema estadoActual;
 
 public:
 
-    SistemaContraIncendios(double umbral)
-        : sensorTemp1(1, "Sensor de temperatura 1"),
-          sensorTemp2(2, "Sensor de temperatura 2"),
-          sensorFlama1(3, "Sensor de flama 1"),
-          sensorFlama2(4, "Sensor de flama 2"),
-          loopA("Loop A"),
-          loopB("Loop B")
+    explicit SistemaContraIncendios(double tolerancia)
+        : deteccion(tolerancia),
+          estadoActual(EstadoSistema::NORMAL)
     {
-        if (umbral <= 0)
-        {
-            throw ExcepcionSistema(
-                "El umbral de temperatura debe ser mayor que cero."
-            );
-        }
-
-        umbralTemperatura = umbral;
-
-        bombaCombustible = true;
-        valvulaCombustible = true;
-
-        valvulaExtintor1 = false;
-        valvulaExtintor2 = false;
-
-        buzzer = false;
-
-        ledVerde = true;
-        ledAmarillo = false;
-        ledRojo = false;
-
-        mensajeLCD =
-            "Sistema en monitoreo normal.";
-
-        estadoSistema = "NORMAL";
-
-        necesitaReset = false;
-
-        actualizarConjuntos();
-
-        historial.agregar(
-            "Sistema iniciado en modo NORMAL."
-        );
     }
 
 
-
-    void ingresarLecturas()
+    void ejecutarCiclo()
     {
-        double temperatura1;
-        double temperatura2;
+        cout << "\n";
+        cout << Interfaz::AZUL
+             << "==================================================\n"
+             << "              CICLO DE MONITOREO\n"
+             << "==================================================\n"
+             << Interfaz::RESET;
 
-        int flama1;
-        int flama2;
+        deteccion.generarLecturas();
 
-        cout << "\n========================================\n";
-        cout << "       INGRESO DE LECTURAS\n";
-        cout << "========================================\n";
+        deteccion.evaluarLoops();
 
-        cout << "Temperatura del sensor 1 (C): ";
-        cin >> temperatura1;
+        deteccion.mostrarLecturas();
 
-        cout << "Temperatura del sensor 2 (C): ";
-        cin >> temperatura2;
-
-        cout << "\nSensor de flama 1:\n";
-        cout << "1 = Flama detectada\n";
-        cout << "0 = No detectada\n";
-        cout << "Seleccion: ";
-        cin >> flama1;
-
-        cout << "\nSensor de flama 2:\n";
-        cout << "1 = Flama detectada\n";
-        cout << "0 = No detectada\n";
-        cout << "Seleccion: ";
-        cin >> flama2;
+        evaluarEstado();
+    }
 
 
-        if ((flama1 != 0 && flama1 != 1) ||
-            (flama2 != 0 && flama2 != 1))
+    void evaluarEstado()
+    {
+        bool A = deteccion.loopAActivo();
+        bool B = deteccion.loopBActivo();
+
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "              INDICACIONES DE CABINA\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
+
+
+        if (!A && !B)
         {
-            throw ExcepcionSistema(
-                "Los sensores de flama solamente aceptan 0 o 1."
+            estadoActual = EstadoSistema::NORMAL;
+
+            cout << Interfaz::VERDE
+                 << "ESTADO: NORMAL\n"
+                 << Interfaz::RESET;
+
+            cout << "MASTER CAUTION : APAGADO\n";
+            cout << "MASTER WARNING : APAGADO\n";
+
+            cout << "\nNo se detectan condiciones anormales.\n";
+
+            historial.insertar(
+                "Sistema en estado normal."
+            );
+        }
+
+   
+        else if (A && !B)
+        {
+            estadoActual = EstadoSistema::ADVERTENCIA;
+
+            cout << Interfaz::AMARILLO
+                 << "MASTER CAUTION\n"
+                 << Interfaz::RESET;
+
+            cout << "Incremento anomalo de temperatura.\n";
+            cout << "Loop A activo.\n";
+
+            cout << "\nVerificando condicion durante "
+                 << Configuracion::TIEMPO_VERIFICACION
+                 << " segundos...\n";
+
+            /*
+                Se mantiene la verificacion de 3 segundos
+                indicada en la logica del proyecto.
+            */
+
+            this_thread::sleep_for(
+                chrono::seconds(
+                    Configuracion::TIEMPO_VERIFICACION
+                )
+            );
+
+            cout << "Condicion verificada.\n";
+            cout << "MASTER CAUTION permanece activa.\n";
+
+            historial.insertar(
+                "MASTER CAUTION: incremento anomalo de temperatura detectado por Loop A."
             );
         }
 
 
-        sensorTemp1.establecerTemperatura(
-            temperatura1,
-            umbralTemperatura
-        );
-
-        sensorTemp2.establecerTemperatura(
-            temperatura2,
-            umbralTemperatura
-        );
-
-        sensorFlama1.establecerDeteccion(
-            flama1 == 1
-        );
-
-        sensorFlama2.establecerDeteccion(
-            flama2 == 1
-        );
-
-
-        evaluarSistema();
-    }
-
-
-    // ====================================================
-    // EVALUAR SISTEMA
-    // ====================================================
-
-    void evaluarSistema()
-    {
-        /*
-        LOOP A:
-        Se activa cuando existe una deteccion de
-        temperatura anormal.
-
-        OR:
-        sensorTemp1 OR sensorTemp2
-        */
-
-        bool estadoLoopA =
-            sensorTemp1.estaActivo() ||
-            sensorTemp2.estaActivo();
-
-
-        /*
-        LOOP B:
-        Se activa cuando cualquiera de los sensores
-        de flama detecta combustion.
-
-        OR:
-        sensorFlama1 OR sensorFlama2
-        */
-
-        bool estadoLoopB =
-            sensorFlama1.estaActivo() ||
-            sensorFlama2.estaActivo();
-
-
-        loopA.establecerEstado(estadoLoopA);
-        loopB.establecerEstado(estadoLoopB);
-
-
-        actualizarConjuntos();
-
-
-
-
-        if (loopA.estaActivo() &&
-            loopB.estaActivo())
+        else if (!A && B)
         {
-            modoEmergencia();
+            estadoActual = EstadoSistema::DISCREPANCIA;
+
+            cout << Interfaz::AMARILLO
+                 << "LOOP B POSIBLE DISCREPANCIA\n"
+                 << Interfaz::RESET;
+
+            cout << "Loop B presenta una condicion de deteccion.\n";
+            cout << "Loop A permanece dentro del rango normal.\n";
+
+            historial.insertar(
+                "Posible discrepancia detectada en Loop B."
+            );
         }
-
-
-
-
-        else if (loopA.estaActivo() &&
-                 !loopB.estaActivo())
-        {
-            modoAdvertencia();
-        }
-
-
-
-
-        else if (!loopA.estaActivo() &&
-                 loopB.estaActivo())
-        {
-            modoDiscrepancia();
-        }
-
-
 
         else
         {
-            modoNormal();
+            estadoActual = EstadoSistema::EMERGENCIA;
+
+            cout << Interfaz::ROJO
+                 << "**************************************************\n"
+                 << "                 MASTER WARNING\n"
+                 << "**************************************************\n"
+                 << Interfaz::RESET;
+
+            cout << Interfaz::ROJO
+                 << "INCENDIO DETECTADO EN EL MOTOR\n"
+                 << Interfaz::RESET;
+
+            cout << "\n";
+            cout << "Loop A : ACTIVO\n";
+            cout << "Loop B : ACTIVO\n";
+
+            cout << "\n";
+            cout << Interfaz::ROJO
+                 << "CONDICION DE INCENDIO CONFIRMADA\n"
+                 << Interfaz::RESET;
+
+            cout << "El sistema presenta la indicacion de emergencia.\n";
+
+            historial.insertar(
+                "MASTER WARNING: incendio confirmado por ambos loops."
+            );
+
+            mostrarEstadoExtincion();
         }
     }
 
 
-    void modoNormal()
+    void mostrarEstadoExtincion()
     {
-        if (necesitaReset)
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "             RECURSOS DE EXTINCION\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
+
+        extincion.mostrarEstado();
+
+        cout << "\nEl piloto puede seleccionar una botella de extincion.\n";
+    }
+
+
+    void seleccionarBotella()
+    {
+        if (estadoActual != EstadoSistema::EMERGENCIA)
         {
-            cout << "\nEl sistema requiere RESET MANUAL.\n";
+            cout << "\n";
+            cout << Interfaz::AMARILLO
+                 << "No existe una condicion de incendio confirmada.\n"
+                 << Interfaz::RESET;
+
             return;
         }
 
-        estadoSistema = "NORMAL";
-
-        ledVerde = true;
-        ledAmarillo = false;
-        ledRojo = false;
-
-        buzzer = false;
-
-        bombaCombustible = true;
-        valvulaCombustible = true;
-
-        valvulaExtintor1 = false;
-        valvulaExtintor2 = false;
-
-        mensajeLCD =
-            "Sistema en monitoreo normal.";
-
-        historial.agregar(
-            "Modo NORMAL: no se detectaron condiciones anormales."
-        );
-    }
-
-
-    void modoAdvertencia()
-    {
-        estadoSistema = "ADVERTENCIA";
-
-        ledVerde = false;
-        ledAmarillo = true;
-        ledRojo = false;
-
-        bombaCombustible = true;
-        valvulaCombustible = true;
-
-        valvulaExtintor1 = false;
-        valvulaExtintor2 = false;
-
-
-        mensajeLCD =
-            "Se detecto un riesgo de sobrecalentamiento por parte del Loop A en la zona del motor.";
-
-        historial.agregar(
-            "Loop A activo: riesgo de sobrecalentamiento."
-        );
-
-
-        cout << "\n========================================\n";
-        cout << "              ADVERTENCIA\n";
-        cout << "========================================\n";
-
-        cout << mensajeLCD << endl;
-
-        cout << "\nVerificando la condicion durante 3 segundos...\n";
-
-
-        for (int i = 3; i >= 1; i--)
-        {
-            cout << i << "...\n";
-
-            this_thread::sleep_for(
-                chrono::seconds(1)
-            );
-        }
-
-
-        cout << "\nCondicion persistente.\n";
-
-
-        // Buzzer de baja frecuencia durante 15 segundos
-
-        buzzer = true;
-
-        cout << "\nBUZZER: CHIME DE BAJA FRECUENCIA\n";
-        cout << "Duracion: 15 segundos\n";
-
-        for (int i = 15; i >= 1; i--)
-        {
-            cout << "\rTiempo restante: "
-                 << setw(2)
-                 << i
-                 << " segundos";
-
-            cout.flush();
-
-            this_thread::sleep_for(
-                chrono::seconds(1)
-            );
-        }
-
-        cout << endl;
-
-        buzzer = false;
-
-        cout << "\nLa condicion de advertencia permanece";
-        cout << " mientras la temperatura sea anormal.\n";
-    }
-
-
-
-
-    void modoDiscrepancia()
-    {
-        estadoSistema = "DISCREPANCIA";
-
-        ledVerde = false;
-        ledAmarillo = true;
-        ledRojo = false;
-
-        buzzer = false;
-
-        bombaCombustible = true;
-        valvulaCombustible = true;
-
-        mensajeLCD =
-            "Loop B posible discrepancia.";
-
-        historial.agregar(
-            "Loop B activo sin activacion del Loop A: posible discrepancia."
-        );
-
-        cout << "\n========================================\n";
-        cout << "        POSIBLE DISCREPANCIA\n";
-        cout << "========================================\n";
-
-        cout << mensajeLCD << endl;
-    }
-
-
-    void modoEmergencia()
-    {
-        estadoSistema = "EMERGENCIA";
-
-        ledVerde = false;
-        ledAmarillo = false;
-
-        ledRojo = true;
-
-        buzzer = true;
-
-        mensajeLCD =
-            "Incendio detectado en el motor. Activacion automatica del sistema.";
-
-
-        historial.agregar(
-            "EMERGENCIA: Loop A y Loop B activos. Incendio confirmado."
-        );
-
-
-        cout << "\n";
-        cout << "****************************************\n";
-        cout << "*              EMERGENCIA              *\n";
-        cout << "****************************************\n";
-
-        cout << "\n" << mensajeLCD << endl;
-
-
-        bombaCombustible = false;
-        valvulaCombustible = false;
-
-        historial.agregar(
-            "Bomba de combustible desactivada."
-        );
-
-        historial.agregar(
-            "Valvula de combustible cerrada."
-        );
-
-
-        cout << "\nACCION 1: CORTE DE COMBUSTIBLE\n";
-        cout << "Bomba: DESACTIVADA\n";
-        cout << "Valvula: CERRADA\n";
-
-
-
-        valvulaExtintor1 = true;
-
-        historial.agregar(
-            "Botella/extintor 1 activado."
-        );
-
-        cout << "\nACCION 2: SISTEMA DE EXTINCION\n";
-        cout << "Extintor 1: ACTIVADO\n";
-
-
-        // Se dispone de dos botellas por motor.
-        // La segunda queda disponible para una siguiente
-        // activacion si fuese necesaria.
-
-        valvulaExtintor2 = false;
-
-        cout << "Extintor 2: DISPONIBLE\n";
-
-
-
-        cout << "\nACCION 3: ALARMA\n";
-        cout << "MASTER WARNING: ACTIVADO\n";
-        cout << "BUZZER: CHIME CONTINUO/REPETITIVO\n";
-
-
-
-        cout << "\n----------------------------------------\n";
-        cout << "ACCIONES DEL SISTEMA\n";
-        cout << "----------------------------------------\n";
-
-        cout << "1. Incendio confirmado.\n";
-        cout << "2. Combustible interrumpido.\n";
-        cout << "3. Valvula de combustible cerrada.\n";
-        cout << "4. Agente extintor activado.\n";
-        cout << "5. MASTER WARNING activo.\n";
-        cout << "6. Buzzer activo.\n";
-        cout << "----------------------------------------\n";
-
-
-        cout << "\nEl sistema permanece en condicion de emergencia";
-        cout << " hasta que termine la condicion critica.\n";
-
-
-        // Para efectos de la simulacion se solicita al usuario
-        // realizar el reset manual.
-
-        necesitaReset = true;
-    }
-
-
-    void resetSistema()
-    {
-        sensorTemp1.establecerFalla(false);
-        sensorTemp2.establecerFalla(false);
-
-        sensorFlama1.establecerFalla(false);
-        sensorFlama2.establecerFalla(false);
-
-
-        // Los sensores se vuelven a evaluar con sus valores
-        // actuales.
-
-        loopA.establecerEstado(false);
-        loopB.establecerEstado(false);
-
-
-        bombaCombustible = true;
-        valvulaCombustible = true;
-
-        valvulaExtintor1 = false;
-        valvulaExtintor2 = false;
-
-        buzzer = false;
-
-        ledVerde = true;
-        ledAmarillo = false;
-        ledRojo = false;
-
-        mensajeLCD =
-            "Sistema restablecido. Operacion normal.";
-
-        estadoSistema = "NORMAL";
-
-        necesitaReset = false;
-
-
-        historial.agregar(
-            "RESET MANUAL realizado: alarmas limpiadas y sistema restablecido."
-        );
-
-
-        actualizarConjuntos();
-
-
-        cout << "\n========================================\n";
-        cout << "           RESET REALIZADO\n";
-        cout << "========================================\n";
-
-        cout << "Alarmas: LIMPIADAS\n";
-        cout << "LED VERDE: ENCENDIDO\n";
-        cout << "Bomba: ACTIVADA\n";
-        cout << "Valvula combustible: ABIERTA\n";
-        cout << "Sistema: NORMAL\n";
-    }
-
-
-
-    void simularFalla()
-    {
         int opcion;
 
-        cout << "\n========================================\n";
-        cout << "        SIMULACION DE FALLA\n";
-        cout << "========================================\n";
-
-        cout << "1. Sensor de temperatura 1\n";
-        cout << "2. Sensor de temperatura 2\n";
-        cout << "3. Sensor de flama 1\n";
-        cout << "4. Sensor de flama 2\n";
-        cout << "0. Cancelar\n";
-
-        cout << "\nSeleccion: ";
-        cin >> opcion;
-
-
-        switch (opcion)
+        do
         {
-        case 1:
-            sensorTemp1.establecerFalla(true);
-            historial.agregar(
-                "Falla simulada en sensor de temperatura 1."
-            );
-            cout << "Falla simulada correctamente.\n";
-            break;
+            extincion.mostrarEstado();
 
-        case 2:
-            sensorTemp2.establecerFalla(true);
-            historial.agregar(
-                "Falla simulada en sensor de temperatura 2."
-            );
-            cout << "Falla simulada correctamente.\n";
-            break;
+            cout << "\n";
+            cout << "1. Activar botella 1\n";
+            cout << "2. Activar botella 2\n";
+            cout << "0. Regresar\n";
 
-        case 3:
-            sensorFlama1.establecerFalla(true);
-            historial.agregar(
-                "Falla simulada en sensor de flama 1."
-            );
-            cout << "Falla simulada correctamente.\n";
-            break;
+            cout << "\nSeleccione una opcion: ";
 
-        case 4:
-            sensorFlama2.establecerFalla(true);
-            historial.agregar(
-                "Falla simulada en sensor de flama 2."
-            );
-            cout << "Falla simulada correctamente.\n";
-            break;
+            cin >> opcion;
 
-        case 0:
-            cout << "Operacion cancelada.\n";
-            break;
+            if (cin.fail())
+            {
+                cin.clear();
 
-        default:
-            throw ExcepcionSistema(
-                "Opcion de falla no valida."
-            );
-        }
+                cin.ignore(
+                    numeric_limits<streamsize>::max(),
+                    '\n'
+                );
 
+                throw ExcepcionSistema(
+                    "La opcion debe ser un valor numerico."
+                );
+            }
 
-        actualizarConjuntos();
+            try
+            {
+                switch (opcion)
+                {
+                    case 1:
+
+                        extincion.activarBotella1();
+
+                        cout << "\n";
+                        cout << Interfaz::VERDE
+                             << "BOTELLA 1 ACTIVADA\n"
+                             << Interfaz::RESET;
+
+                        cout << "Se ha utilizado el primer disparo "
+                                "de extincion.\n";
+
+                        historial.insertar(
+                            "Botella 1 de extincion activada."
+                        );
+
+                        break;
+
+                    case 2:
+
+                        extincion.activarBotella2();
+
+                        cout << "\n";
+                        cout << Interfaz::VERDE
+                             << "BOTELLA 2 ACTIVADA\n"
+                             << Interfaz::RESET;
+
+                        cout << "Se ha utilizado el segundo disparo "
+                                "de extincion.\n";
+
+                        historial.insertar(
+                            "Botella 2 de extincion activada."
+                        );
+
+                        break;
+
+                    case 0:
+
+                        break;
+
+                    default:
+
+                        cout << "\n";
+                        cout << Interfaz::AMARILLO
+                             << "Opcion no valida.\n"
+                             << Interfaz::RESET;
+                }
+            }
+            catch (const ExcepcionSistema& e)
+            {
+                cout << "\n";
+                cout << Interfaz::ROJO
+                     << "ERROR: "
+                     << e.what()
+                     << Interfaz::RESET
+                     << endl;
+            }
+
+        } while (opcion != 0);
     }
 
 
-    void actualizarConjuntos()
+    void mostrarExtincion() const
     {
-        conjuntoLoopA = Conjunto();
-        conjuntoLoopB = Conjunto();
-
-
-        if (sensorTemp1.estaActivo())
-        {
-            conjuntoLoopA.agregar(
-                sensorTemp1.getId()
-            );
-        }
-
-        if (sensorTemp2.estaActivo())
-        {
-            conjuntoLoopA.agregar(
-                sensorTemp2.getId()
-            );
-        }
-
-
-        if (sensorFlama1.estaActivo())
-        {
-            conjuntoLoopB.agregar(
-                sensorFlama1.getId()
-            );
-        }
-
-        if (sensorFlama2.estaActivo())
-        {
-            conjuntoLoopB.agregar(
-                sensorFlama2.getId()
-            );
-        }
+        extincion.mostrarEstado();
     }
-
-
-
-    void mostrarEstado() const
-    {
-        cout << "\n========================================\n";
-        cout << "       ESTADO DEL SISTEMA\n";
-        cout << "========================================\n";
-
-
-        cout << "\n--- SENSORES ---\n";
-
-        sensorTemp1.mostrar();
-        sensorTemp2.mostrar();
-
-        sensorFlama1.mostrar();
-        sensorFlama2.mostrar();
-
-
-        cout << "\n--- LOOPS ---\n";
-
-        cout << loopA.getNombre()
-             << ": "
-             << (loopA.estaActivo()
-                     ? "ACTIVO"
-                     : "INACTIVO")
-             << endl;
-
-        cout << loopB.getNombre()
-             << ": "
-             << (loopB.estaActivo()
-                     ? "ACTIVO"
-                     : "INACTIVO")
-             << endl;
-
-
-        cout << "\n--- ACTUADORES ---\n";
-
-        cout << "Bomba de combustible: "
-             << (bombaCombustible
-                     ? "ACTIVADA"
-                     : "DESACTIVADA")
-             << endl;
-
-        cout << "Valvula de combustible: "
-             << (valvulaCombustible
-                     ? "ABIERTA"
-                     : "CERRADA")
-             << endl;
-
-        cout << "Valvula extintor 1: "
-             << (valvulaExtintor1
-                     ? "ACTIVADA"
-                     : "DESACTIVADA")
-             << endl;
-
-        cout << "Valvula extintor 2: "
-             << (valvulaExtintor2
-                     ? "ACTIVADA"
-                     : "DESACTIVADA")
-             << endl;
-
-
-        cout << "\n--- INDICADORES ---\n";
-
-        cout << "LED VERDE: "
-             << (ledVerde
-                     ? "ENCENDIDO"
-                     : "APAGADO")
-             << endl;
-
-        cout << "MASTER CAUTION / LED AMARILLO: "
-             << (ledAmarillo
-                     ? "ENCENDIDO"
-                     : "APAGADO")
-             << endl;
-
-        cout << "MASTER WARNING / LED ROJO: "
-             << (ledRojo
-                     ? "ENCENDIDO"
-                     : "APAGADO")
-             << endl;
-
-        cout << "BUZZER: "
-             << (buzzer
-                     ? "ACTIVO"
-                     : "INACTIVO")
-             << endl;
-
-
-        cout << "\n--- LCD ---\n";
-        cout << mensajeLCD << endl;
-
-
-        cout << "\n--- ESTADO GENERAL ---\n";
-        cout << estadoSistema << endl;
-
-
-        if (necesitaReset)
-        {
-            cout << "\n*** SE REQUIERE RESET MANUAL ***\n";
-        }
-    }
-
-
-
-    void mostrarOperacionesConjuntos()
-    {
-        actualizarConjuntos();
-
-
-        cout << "\n========================================\n";
-        cout << "        OPERACIONES DE CONJUNTOS\n";
-        cout << "========================================\n";
-
-
-        cout << "\nConjunto Loop A: ";
-        conjuntoLoopA.mostrar();
-
-
-        cout << "Conjunto Loop B: ";
-        conjuntoLoopB.mostrar();
-
-
-        cout << "\n--- PERTENENCIA ---\n";
-
-        cout << "Sensor 1 pertenece al Loop A: "
-             << (conjuntoLoopA.pertenece(1)
-                     ? "SI"
-                     : "NO")
-             << endl;
-
-        cout << "Sensor 2 pertenece al Loop A: "
-             << (conjuntoLoopA.pertenece(2)
-                     ? "SI"
-                     : "NO")
-             << endl;
-
-        cout << "Sensor 3 pertenece al Loop B: "
-             << (conjuntoLoopB.pertenece(3)
-                     ? "SI"
-                     : "NO")
-             << endl;
-
-        cout << "Sensor 4 pertenece al Loop B: "
-             << (conjuntoLoopB.pertenece(4)
-                     ? "SI"
-                     : "NO")
-             << endl;
-
-
-
-        Conjunto unionConjuntos =
-            conjuntoLoopA + conjuntoLoopB;
-
-        cout << "\n--- UNION ---\n";
-        cout << "A U B = ";
-        unionConjuntos.mostrar();
-
-
-        Conjunto interseccion =
-            conjuntoLoopA & conjuntoLoopB;
-
-        cout << "\n--- INTERSECCION ---\n";
-        cout << "A INTERSECCION B = ";
-        interseccion.mostrar();
-
-
-
-        Conjunto diferencia =
-            conjuntoLoopA - conjuntoLoopB;
-
-        cout << "\n--- DIFERENCIA ---\n";
-        cout << "A - B = ";
-        diferencia.mostrar();
-    }
-
 
 
     void mostrarHistorial() const
     {
-        cout << "\n========================================\n";
-        cout << "          HISTORIAL DEL SISTEMA\n";
-        cout << "========================================\n";
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "                HISTORIAL DEL SISTEMA\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
 
         historial.mostrar();
     }
 
 
-
-    void mostrarInformacion() const
+    void mostrarConjuntos() const
     {
-        cout << "\n========================================\n";
-        cout << " SISTEMA DE PROTECCION CONTRA INCENDIOS\n";
-        cout << "========================================\n";
+        Conjunto A =
+            deteccion.obtenerConjuntoLoopA();
 
-        cout << "\nUmbral de temperatura configurado: "
-             << umbralTemperatura
-             << " C"
-             << endl;
+        Conjunto B =
+            deteccion.obtenerConjuntoLoopB();
 
-        cout << "\nLOGICA:\n";
+        cout << "\n";
+        cout << Interfaz::CYAN
+             << "--------------------------------------------------\n"
+             << "           ESTRUCTURA DE CONJUNTOS\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
 
-        cout << "Loop A = Sensor temperatura 1 OR Sensor temperatura 2\n";
-        cout << "Loop B = Sensor flama 1 OR Sensor flama 2\n";
+        cout << "\nLoop A = ";
+        A.mostrar();
 
-        cout << "\nNORMAL:\n";
-        cout << "Loop A = 0 AND Loop B = 0\n";
+        cout << "\nLoop B = ";
+        B.mostrar();
 
-        cout << "\nADVERTENCIA:\n";
-        cout << "Loop A = 1 AND Loop B = 0\n";
+        cout << "\n\n";
 
-        cout << "\nEMERGENCIA:\n";
-        cout << "Loop A = 1 AND Loop B = 1\n";
 
-        cout << "\nDISCREPANCIA:\n";
-        cout << "Loop A = 0 AND Loop B = 1\n";
+        cout << "PERTENENCIA\n";
+
+        cout << "Sensor 1 pertenece a Loop A: ";
+
+        if (A.pertenece(1))
+        {
+            cout << "SI\n";
+        }
+        else
+        {
+            cout << "NO\n";
+        }
+
+        cout << "Sensor 4 pertenece a Loop A: ";
+
+        if (A.pertenece(4))
+        {
+            cout << "SI\n";
+        }
+        else
+        {
+            cout << "NO\n";
+        }
+
+
+        Conjunto unionAB = A + B;
+
+        cout << "\nUNION A + B = ";
+        unionAB.mostrar();
+
+
+        Conjunto interseccionAB = A & B;
+
+        cout << "\nINTERSECCION A & B = ";
+        interseccionAB.mostrar();
+
+
+        Conjunto diferenciaAB = A - B;
+
+        cout << "\nDIFERENCIA A - B = ";
+        diferenciaAB.mostrar();
+
+        cout << "\n";
+    }
+
+
+    void reset()
+    {
+        estadoActual = EstadoSistema::NORMAL;
+
+        cout << "\n";
+        cout << Interfaz::VERDE
+             << "--------------------------------------------------\n"
+             << "                SISTEMA RESTABLECIDO\n"
+             << "--------------------------------------------------\n"
+             << Interfaz::RESET;
+
+        cout << "Las indicaciones de emergencia han sido reiniciadas.\n";
+
+        historial.insertar(
+            "Sistema restablecido mediante procedimiento de reset."
+        );
     }
 };
 
 
-// ========================================================
-// FUNCION PRINCIPAL
-// ========================================================
+void mostrarEncabezado()
+{
+    cout << "\n";
+
+    cout << Interfaz::AZUL
+         << "==================================================\n"
+         << "       SISTEMA DE DETECCION Y EXTINCION\n"
+         << "                  DE AERONAVE\n"
+         << "==================================================\n"
+         << Interfaz::RESET;
+
+    cout << "             MONITOREO DEL MOTOR\n";
+}
+
+
 
 int main()
 {
     try
     {
-        double umbral;
-
-        cout << "========================================\n";
-        cout << " SISTEMA DE DETECCION DE INCENDIO\n";
-        cout << "      EN MOTOR DE AERONAVE\n";
-        cout << "========================================\n";
-
-        cout << "\nIngrese el umbral de temperatura";
-        cout << " para considerar anormal la lectura (C): ";
-
-        cin >> umbral;
+        mostrarEncabezado();
 
 
-        if (cin.fail())
-        {
-            throw ExcepcionSistema(
-                "Debe introducir un valor numerico."
-            );
-        }
-
-
-        SistemaContraIncendios sistema(umbral);
-
+        SistemaContraIncendios sistema(
+            Configuracion::TEMPERATURA_TOLERANCIA
+        );
 
         int opcion;
 
-
         do
         {
-            cout << "\n\n========================================\n";
-            cout << "              MENU PRINCIPAL\n";
-            cout << "========================================\n";
+            cout << "\n";
+            cout << Interfaz::CYAN
+                 << "==================================================\n"
+                 << "                    MENU\n"
+                 << "==================================================\n"
+                 << Interfaz::RESET;
 
-            cout << "1. Ingresar lecturas de sensores\n";
-            cout << "2. Mostrar estado del sistema\n";
-            cout << "3. Realizar RESET manual\n";
-            cout << "4. Mostrar historial\n";
-            cout << "5. Mostrar operaciones de conjuntos\n";
-            cout << "6. Simular falla de un sensor\n";
-            cout << "7. Mostrar informacion de la logica\n";
+            cout << "1. Ejecutar ciclo de monitoreo\n";
+            cout << "2. Sistema de extincion\n";
+            cout << "3. Seleccionar botella de extincion\n";
+            cout << "4. Mostrar historial de eventos\n";
+            cout << "5. Mostrar conjuntos de sensores\n";
+            cout << "6. Restablecer sistema\n";
             cout << "0. Salir\n";
 
             cout << "\nSeleccione una opcion: ";
-            cin >> opcion;
 
+            cin >> opcion;
 
             if (cin.fail())
             {
                 cin.clear();
-                cin.ignore(10000, '\n');
+
+                cin.ignore(
+                    numeric_limits<streamsize>::max(),
+                    '\n'
+                );
 
                 throw ExcepcionSistema(
-                    "La opcion debe ser un numero."
+                    "La opcion debe ser numerica."
                 );
             }
 
-
             switch (opcion)
             {
-            case 1:
-                sistema.ingresarLecturas();
-                break;
+
+                case 1:
+
+                    sistema.ejecutarCiclo();
+
+                    break;
+
+                case 2:
+
+                    sistema.mostrarExtincion();
+
+                    break;
+
+             
+
+                case 3:
+
+                    sistema.seleccionarBotella();
+
+                    break;
 
 
-            case 2:
-                sistema.mostrarEstado();
-                break;
+                case 4:
+
+                    sistema.mostrarHistorial();
+
+                    break;
+
+   
+
+                case 5:
+
+                    sistema.mostrarConjuntos();
+
+                    break;
+
+        
+                case 6:
+
+                    sistema.reset();
+
+                    break;
 
 
-            case 3:
-                sistema.resetSistema();
-                break;
+                case 0:
+
+                    cout << "\n";
+                    cout << Interfaz::VERDE
+                         << "Sistema finalizado correctamente.\n"
+                         << Interfaz::RESET;
+
+                    break;
 
 
-            case 4:
-                sistema.mostrarHistorial();
-                break;
+                default:
 
-
-            case 5:
-                sistema.mostrarOperacionesConjuntos();
-                break;
-
-
-            case 6:
-                sistema.simularFalla();
-                break;
-
-
-            case 7:
-                sistema.mostrarInformacion();
-                break;
-
-
-            case 0:
-                cout << "\nPrograma finalizado.\n";
-                break;
-
-
-            default:
-                cout << "\nOpcion no valida.\n";
+                    cout << "\n";
+                    cout << Interfaz::AMARILLO
+                         << "La opcion seleccionada no existe.\n"
+                         << Interfaz::RESET;
             }
 
-        }
-        while (opcion != 0);
+        } while (opcion != 0);
     }
-
-
     catch (const ExcepcionSistema& e)
     {
-        cout << "\n========================================\n";
-        cout << "              ERROR\n";
-        cout << "========================================\n";
+        cout << "\n";
+        cout << Interfaz::ROJO
+             << "ERROR DEL SISTEMA\n"
+             << Interfaz::RESET;
 
         cout << e.what() << endl;
     }
-
-
     catch (const exception& e)
     {
-        cout << "\nError inesperado: "
-             << e.what()
-             << endl;
-    }
+        cout << "\n";
+        cout << Interfaz::ROJO
+             << "ERROR INESPERADO\n"
+             << Interfaz::RESET;
 
+        cout << e.what() << endl;
+    }
 
     return 0;
 }
