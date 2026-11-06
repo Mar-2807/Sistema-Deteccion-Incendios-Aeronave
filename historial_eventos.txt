@@ -1,0 +1,3 @@
+Motor 1: MASTER CAUTION - OVERHEAT.
+Motor 2: MASTER CAUTION - OVERHEAT.
+AUTO-TEST ejecutado. Sistema operativo.
