@@ -1,446 +1,327 @@
-# Sistema de Detección, Alarma y Extinción Automática de Incendios en el Motor de una Aeronave
+# Sistema de Detección y Extinción de Incendios de Motor
 
 ## Descripción
 
-Este proyecto implementa en C++ una simulación del sistema de detección, alarma y extinción automática de incendios en el motor de una aeronave, siguiendo la lógica y el funcionamiento descritos en el proyecto.
+Este proyecto consiste en la implementación en C++ de un sistema simulado de detección y extinción de incendios en motores de una aeronave.
 
-El sistema utiliza dos loops principales:
+El programa representa de forma simplificada la arquitectura de un sistema aeronáutico de detección y extinción de incendios. La información de temperatura es generada automáticamente por el programa y procesada mediante sensores, loops y computadoras de motor.
 
-- **Loop A:** formado por dos sensores de temperatura para detectar un aumento anormal de temperatura en la zona del motor.
-- **Loop B:** formado por dos sensores de flama para detectar radiación infrarroja asociada con la combustión.
+El sistema permite identificar condiciones normales, sobretemperatura e incendio, además de mostrar las indicaciones correspondientes en cabina y controlar de manera secuencial el sistema de extinción.
 
-Dependiendo de las señales recibidas por ambos loops, el sistema puede encontrarse en diferentes condiciones: funcionamiento normal, advertencia, emergencia o posible discrepancia.
+La arquitectura principal del programa es:
+
+**Sensor → Loop → ComputadoraMotor → SistemaAvion**
 
 ---
 
 ## Objetivo
 
-Desarrollar una simulación en C++ que represente el funcionamiento del sistema de detección y protección contra incendios del motor, incorporando conceptos de Programación Orientada a Objetos y Estructuras de Datos.
+Desarrollar un programa orientado a objetos que simule el funcionamiento básico de un sistema de detección y extinción de incendios de motor, aplicando conceptos de:
 
-El programa permite introducir las lecturas de los sensores, determinar el estado de los loops, activar las diferentes alarmas y representar las acciones que realizaría el sistema ante una condición de emergencia.
+- Programación Orientada a Objetos (POO).
+- Encapsulamiento.
+- Composición entre clases.
+- Sobrecarga de operadores.
+- Manejo de excepciones.
+- Estructuras de datos lineales.
+- Arreglos estáticos.
+- Generación aleatoria de datos.
+- Lógica de detección mediante sensores y loops.
 
 ---
 
 ## Funcionamiento del sistema
 
-### Loop A
+Cada motor cuenta con:
 
-El Loop A utiliza dos sensores de temperatura.
+- 2 loops de detección.
+- 2 sensores de temperatura por loop.
+- 2 botellas de extinción.
+- Una válvula SOV para el corte automático del suministro de combustible.
 
-La lógica utilizada es:
+Por lo tanto, cada motor cuenta con 4 sensores de temperatura en total.
 
-```text
-Sensor de temperatura 1 OR Sensor de temperatura 2
-```
+Los sensores generan automáticamente valores de temperatura dentro de un rango establecido por el programa. El usuario no introduce manualmente las temperaturas ni los valores de los umbrales.
 
-Si alguno de los sensores detecta una temperatura igual o superior al umbral configurado, el Loop A se considera activo.
+### Umbrales de temperatura
 
-### Loop B
+El programa utiliza los siguientes valores:
 
-El Loop B utiliza dos sensores de flama.
-
-La lógica utilizada es:
-
-```text
-Sensor de flama 1 OR Sensor de flama 2
-```
-
-Si alguno de los sensores detecta flama, el Loop B se considera activo.
+| Condición | Temperatura |
+|---|---:|
+| Normal | Menor a 350 °C |
+| Overheat | 350 °C o mayor |
+| Fire | 600 °C o mayor |
 
 ---
 
-## Modos de operación
+## Lógica de detección
 
-### Modo normal
+Cada loop contiene dos sensores.
 
-Se presenta cuando:
+El sistema analiza las condiciones de ambos sensores y determina el estado del loop.
 
-```text
-Loop A = 0
-Loop B = 0
-```
+Para confirmar un incendio en el motor se utiliza la lógica:
 
-En esta condición:
+**Loop A en FIRE AND Loop B en FIRE**
 
-- Los sensores continúan siendo monitoreados.
-- El LED verde permanece encendido.
-- No se activa ninguna alarma.
-- La bomba de combustible permanece activa.
-- La válvula de combustible permanece abierta.
-- La pantalla muestra que el sistema se encuentra en monitoreo normal.
+Cuando ambos loops confirman la condición de incendio:
 
-### Modo de advertencia
+1. Se activa `MASTER WARNING`.
+2. El sistema muestra la condición de FIRE.
+3. Se cierra automáticamente la válvula SOV.
+4. El piloto puede activar el sistema de extinción.
 
-Se presenta cuando:
+Si existe una condición de sobretemperatura sin incendio confirmado:
 
-```text
-Loop A = 1
-Loop B = 0
-```
+`MASTER CAUTION`
 
-El sistema interpreta esta condición como un posible sobrecalentamiento.
-
-Se realiza una verificación de la condición durante 3 segundos. Si la condición persiste:
-
-- Se activa el LED amarillo.
-- Se activa la indicación **MASTER CAUTION**.
-- Se activa el buzzer durante 15 segundos.
-- La pantalla muestra:
-
-```text
-Se detecto un riesgo de sobrecalentamiento por parte del Loop A en la zona del motor.
-```
-
-### Modo de emergencia
-
-Se presenta cuando:
-
-```text
-Loop A = 1
-Loop B = 1
-```
-
-La activación simultánea de ambos loops confirma una condición de incendio.
-
-El sistema realiza la secuencia de emergencia:
-
-1. Activa la indicación **MASTER WARNING**.
-2. Activa el buzzer de forma continua/repetitiva.
-3. Desactiva la bomba de combustible.
-4. Cierra la válvula de combustible.
-5. Activa el sistema de extinción.
-6. Registra las acciones realizadas.
-7. Mantiene la condición de emergencia hasta realizar un reset manual.
-
-La pantalla muestra:
-
-```text
-Incendio detectado en el motor. Activacion automatica del sistema.
-```
-
-### Posible discrepancia
-
-Si:
-
-```text
-Loop A = 0
-Loop B = 1
-```
-
-el sistema muestra:
-
-```text
-Loop B posible discrepancia.
-```
-
-Esto representa la condición en la que el Loop B detecta una posible presencia de fuego mientras el Loop A no detecta un aumento anormal de temperatura.
+Si Loop B detecta una condición de incendio sin que Loop A la confirme, el sistema puede mostrar una indicación de posible discrepancia de Loop B.
 
 ---
 
-# Programación Orientada a Objetos
+## Sistema de extinción
 
-El proyecto incorpora Programación Orientada a Objetos mediante diferentes clases.
+Cada motor dispone de dos botellas de extinción:
 
-## Clases principales
+- SQUIB A
+- SQUIB B
 
-### `Sensor`
+Las botellas se utilizan de manera secuencial.
 
-Es la clase base para representar los sensores del sistema.
+### Primera botella
 
-Contiene información como:
+Cuando existe un incendio confirmado, el piloto puede activar:
 
-- Identificador.
-- Nombre.
-- Estado de activación.
-- Estado operativo.
+**SQUIB A**
 
-### `SensorTemperatura`
+La primera botella queda marcada como utilizada.
 
-Hereda de la clase `Sensor` y representa los sensores encargados de medir la temperatura del motor.
+### Segunda botella
 
-### `SensorFlama`
+Si después de utilizar SQUIB A el incendio continúa, el piloto puede activar:
 
-Hereda de `Sensor` y representa los sensores encargados de detectar flama.
+**SQUIB B**
 
-### `Loop`
+SQUIB B solamente puede utilizarse después de que SQUIB A haya sido utilizada.
 
-Representa cada uno de los loops del sistema:
+El programa evita que una misma botella pueda utilizarse más de una vez.
+
+---
+
+## Indicaciones en cabina
+
+El programa no simula físicamente componentes como LEDs, buzzers o válvulas mediante objetos independientes.
+
+En su lugar, representa las indicaciones que recibiría el piloto mediante mensajes en pantalla, por ejemplo:
+
+- `MASTER CAUTION`
+- `MASTER WARNING`
+- `ENGINE FIRE`
+- `FUEL SOV CLOSED`
+- `SQUIB A FIRED`
+- `SQUIB B FIRED`
+- `LOOP B POSSIBLE DISCREPANCY`
+
+De esta manera, la interfaz representa principalmente la información que tendría disponible la tripulación.
+
+---
+
+## Arquitectura de clases
+
+### Sensor
+
+Representa un sensor de temperatura.
+
+Sus principales funciones son:
+
+- Generar una lectura de temperatura.
+- Determinar si existe sobretemperatura.
+- Determinar si existe condición de incendio.
+- Almacenar el identificador del sensor y su temperatura actual.
+
+### Loop
+
+Representa un loop de detección.
+
+Cada loop contiene dos sensores de temperatura.
+
+Sus funciones principales son:
+
+- Obtener las lecturas de sus sensores.
+- Determinar el estado del loop.
+- Identificar condiciones de overheat.
+- Identificar condiciones de fire.
+
+También implementa sobrecarga del operador `==`.
+
+### ComputadoraMotor
+
+Representa la computadora encargada de procesar la información de un motor.
+
+Contiene:
 
 - Loop A.
 - Loop B.
+- Estado de la válvula SOV.
+- Estado de las botellas de extinción.
+- Estado de MASTER CAUTION.
+- Estado de MASTER WARNING.
+- Estado actual del motor.
 
-### `SistemaContraIncendios`
+Sus funciones incluyen:
 
-Es la clase principal encargada de coordinar los sensores, loops, actuadores, alarmas, pantalla, historial y estados del sistema.
+- Generar las lecturas de los sensores.
+- Procesar las condiciones de los loops.
+- Confirmar un incendio.
+- Activar el corte de combustible.
+- Activar las botellas de extinción.
+- Ejecutar el auto-test.
+- Realizar el reset cuando las condiciones lo permiten.
 
-### `Conjunto`
+### SistemaAvion
 
-Representa conjuntos mediante arreglos y permite realizar diferentes operaciones entre ellos.
+Representa el sistema general de la aeronave.
 
-### `ListaEnlazada`
+Contiene las computadoras correspondientes a los motores y administra:
 
-Implementa una estructura de datos lineal mediante nodos enlazados para almacenar el historial de eventos del sistema.
-
----
-
-# Estructuras de datos
-
-## Lista enlazada
-
-El programa utiliza una **lista enlazada** para almacenar el historial de eventos.
-
-Cada nodo contiene:
-
-```text
-Dato
-Puntero al siguiente nodo
-```
-
-La lista permite agregar y mostrar los eventos registrados durante la ejecución del programa.
-
-Ejemplos de eventos almacenados:
-
-```text
-Sistema iniciado en modo NORMAL.
-Loop A activo: riesgo de sobrecalentamiento.
-EMERGENCIA: Loop A y Loop B activos. Incendio confirmado.
-Bomba de combustible desactivada.
-Valvula de combustible cerrada.
-RESET MANUAL realizado.
-```
+- Monitoreo de los motores.
+- Visualización de información.
+- Activación de extinción.
+- Auto-test.
+- Reset.
+- Historial de eventos.
 
 ---
 
-# Arreglos como conjuntos
+## Estructura de datos
 
-La clase `Conjunto` utiliza un arreglo para representar los elementos de un conjunto.
+El proyecto utiliza una estructura lineal para almacenar el historial de eventos.
 
-Los sensores están identificados mediante números:
+Se implementa una **pila (stack)** mediante un arreglo estático.
 
-```text
-1 = Sensor de temperatura 1
-2 = Sensor de temperatura 2
-3 = Sensor de flama 1
-4 = Sensor de flama 2
-```
+La pila tiene una capacidad máxima de:
 
-El programa implementa las siguientes operaciones:
+**20 eventos**
 
-### Pertenencia
+Los eventos se almacenan conforme ocurren y pueden consultarse posteriormente siguiendo el principio:
 
-Permite comprobar si un elemento pertenece a un conjunto.
+**LIFO — Last In, First Out**
 
-```cpp
-pertenece(valor)
-```
+Es decir, el último evento registrado es el primero que se recupera.
 
-### Unión
-
-Combina los elementos de dos conjuntos.
-
-```cpp
-A + B
-```
-
-### Intersección
-
-Obtiene los elementos que pertenecen a ambos conjuntos.
-
-```cpp
-A & B
-```
-
-### Diferencia
-
-Obtiene los elementos que pertenecen al primer conjunto pero no al segundo.
-
-```cpp
-A - B
-```
-
----
-
-# Sobrecarga de operadores
-
-El proyecto utiliza sobrecarga de operadores para trabajar con los conjuntos.
-
-| Operador | Operación |
-|---|---|
-| `+` | Unión |
-| `&` | Intersección |
-| `-` | Diferencia |
-| `==` | Comparación del estado de dos loops |
-
-Ejemplo:
-
-```cpp
-Conjunto unionConjuntos = conjuntoLoopA + conjuntoLoopB;
-```
-
----
-
-# Manejo de excepciones
-
-El programa incluye una clase personalizada llamada:
-
-```cpp
-ExcepcionSistema
-```
-
-Esta clase permite controlar situaciones que podrían producir errores durante la ejecución.
-
-Se utiliza `try`, `throw` y `catch`.
-
-Algunos ejemplos de validaciones son:
-
-- Temperaturas fuera del rango permitido para la simulación.
-- Valores diferentes de `0` y `1` para los sensores de flama.
-- Umbral de temperatura no válido.
-- Opciones incorrectas del menú.
-- Capacidad máxima del conjunto.
-
----
-
-# Menú del programa
-
-El programa cuenta con un menú principal:
-
-```text
-1. Ingresar lecturas de sensores
-2. Mostrar estado del sistema
-3. Realizar RESET manual
-4. Mostrar historial
-5. Mostrar operaciones de conjuntos
-6. Simular falla de un sensor
-7. Mostrar información de la lógica
-0. Salir
-```
-
-## Ingresar lecturas
-
-Permite introducir:
-
-- Temperatura del sensor 1.
-- Temperatura del sensor 2.
-- Estado del sensor de flama 1.
-- Estado del sensor de flama 2.
-
-## Mostrar estado
-
-Muestra:
-
-- Estado de los sensores.
-- Estado de los loops.
-- Bomba de combustible.
-- Válvula de combustible.
-- Válvulas del sistema de extinción.
-- LEDs.
-- Buzzer.
-- Mensaje LCD.
-- Estado general del sistema.
-
-## Reset manual
-
-Permite restablecer el sistema después de una condición de emergencia.
-
-Al realizar el reset:
-
-- Se limpian las alarmas.
-- Se enciende el LED verde.
-- Se reactiva la bomba de combustible.
-- Se abre nuevamente la válvula de combustible.
-- El sistema vuelve al estado normal.
-
-## Historial
-
-Muestra los eventos registrados mediante la lista enlazada.
-
-## Operaciones de conjuntos
-
-Permite visualizar:
+No se utilizan operaciones de:
 
 - Pertenencia.
 - Unión.
 - Intersección.
 - Diferencia.
 
-## Simulación de fallas
+---
 
-Permite simular una falla en alguno de los sensores para realizar pruebas del sistema.
+## Manejo de excepciones
+
+El programa incluye la clase:
+
+`ExcepcionSistema`
+
+Esta clase permite manejar situaciones no válidas durante la ejecución del sistema.
+
+Por ejemplo:
+
+- Intentar activar una botella que ya fue utilizada.
+- Intentar utilizar SQUIB B antes de SQUIB A.
+- Intentar realizar un reset cuando todavía existe una condición de FIRE u OVERHEAT.
+- Otras operaciones que no sean permitidas por la lógica del sistema.
+
+Las excepciones permiten evitar que una operación incorrecta provoque un comportamiento inesperado del programa.
 
 ---
 
-# Tecnologías utilizadas
+## Sobrecarga de operadores
 
-- **Lenguaje:** C++
-- **Programación Orientada a Objetos**
-- **Clases y objetos**
-- **Herencia**
-- **Encapsulamiento**
-- **Sobrecarga de operadores**
-- **Manejo de excepciones**
-- **Lista enlazada**
-- **Arreglos**
-- **Operaciones de conjuntos**
+El proyecto utiliza sobrecarga de operadores como parte de la implementación de POO.
+
+La clase `Loop` utiliza el operador:
+
+`==`
+
+Este operador permite comparar el estado de dos objetos `Loop`.
 
 ---
 
-# Compilación
+## Auto-test
 
-El programa utiliza características compatibles con C++17.
+El sistema cuenta con una función de auto-test.
 
-Para compilarlo con `g++`:
+El auto-test permite comprobar el funcionamiento básico de los componentes principales del sistema y verificar que las condiciones necesarias para la simulación estén disponibles.
+
+---
+
+## Reset del sistema
+
+El reset es manual.
+
+El sistema solamente permite realizar un reset cuando no existe una condición activa de:
+
+- FIRE.
+- OVERHEAT.
+
+Esto evita borrar una condición de alarma mientras el problema continúa presente.
+
+---
+
+## Tecnologías utilizadas
+
+- Lenguaje: **C++**
+- Paradigma: **Programación Orientada a Objetos**
+- Compilador: **g++**
+- Entorno recomendado: **MSYS2 / MinGW**
+- Control de versiones: **Git y GitHub**
+
+---
+
+## Requisitos
+
+Para ejecutar el proyecto se necesita:
+
+- Windows.
+- Compilador C++ compatible con C++11 o superior.
+- `g++`.
+- Git, si se desea trabajar con el repositorio de GitHub.
+
+---
+
+## Compilación
+
+Desde la terminal, ubicándose en la carpeta donde se encuentra el archivo `.cpp`, se puede compilar con:
 
 ```bash
-g++ -std=c++17 proyecto_avion.cpp -o proyecto_avion
+g++ -std=c++11 main.cpp -o sistema_incendios
 ```
 
-En Windows:
+Después de compilar, se ejecuta con:
 
 ```bash
-g++ -std=c++17 proyecto_avion.cpp -o proyecto_avion.exe
-```
-
-Para ejecutarlo:
-
-```bash
-./proyecto_avion
+./sistema_incendios
 ```
 
 En Windows también puede ejecutarse como:
 
 ```bash
-./proyecto_avion.exe
+sistema_incendios.exe
 ```
 
 ---
 
-# Archivos del proyecto
+## Menú del programa
 
-```text
-Sistema-Deteccion-Incendios-Aeronave/
-│
-├── proyecto_avion.cpp
-│
-└── README.md
-```
+El programa cuenta con un menú para realizar las principales operaciones del sistema, entre ellas:
 
----
-
-# Consideración sobre el umbral de temperatura
-
-El programa solicita al usuario el umbral de temperatura al iniciar.
-
-Esto se realiza porque la información proporcionada para el proyecto describe la lógica de activación del Loop A, pero no establece de forma inequívoca un único valor de temperatura que deba utilizarse como umbral fijo del programa.
-
-Por esta razón, el valor se configura al comenzar la simulación en lugar de establecer arbitrariamente un valor como si fuera un requisito del sistema.
-
----
-
-# Alcance del proyecto
-
-Este programa es una **simulación académica en C++** de la lógica de funcionamiento descrita para el sistema de protección contra incendios del motor.
-
-No controla directamente sensores, bombas, válvulas, LEDs, buzzers o componentes físicos de una aeronave.
-
-Las entradas y salidas del sistema son representadas mediante la consola del programa.
+1. Monitorear motores.
+2. Consultar información de un motor.
+3. Activar una botella de extinción.
+4. Ejecutar el auto-test.
+5. Realizar reset.
+6. Consultar el historial de eventos.
+7. Salir.
