@@ -6,6 +6,7 @@
 #include <limits>
 #include <fstream>
 #include <cctype>
+#include <locale.h>
 
 using namespace std;
 
@@ -444,7 +445,7 @@ public:
         {
             throw ExcepcionSistema(
                 "No se puede disparar la botella: "
-                "la valvula SOV no esta cerrada."
+                "la válvula SOV no está cerrada."
             );
         }
 
@@ -474,7 +475,7 @@ public:
             {
                 throw ExcepcionSistema(
                     "La botella SQUIB B solo puede utilizarse "
-                    "despues de la botella SQUIB A."
+                    "después de la botella SQUIB A."
                 );
             }
 
@@ -660,7 +661,7 @@ public:
         loopB.mostrar();
 
         cout << "\n";
-        cout << "INDICACION EICAS: ";
+        cout << "INDICACIÓN EICAS: ";
 
         if (masterWarning)
         {
@@ -791,7 +792,7 @@ public:
         {
             throw ExcepcionSistema(
                 "Desbordamiento de pila: "
-                "el historial alcanzo su limite."
+                "el historial alcanzó su límite."
             );
         }
 
@@ -941,7 +942,7 @@ public:
             );
 
             throw ExcepcionSistema(
-                "La seleccion debe ser numerica."
+                "La selección debe ser numerica."
             );
         }
 
@@ -973,7 +974,7 @@ public:
             cin.clear();
             cin.ignore(numeric_limits<streamsize>::max(), '\n');
             throw ExcepcionSistema(
-                "El numero de motor debe ser numerico."
+                "El número de motor debe ser numérico."
             );
         }
 
@@ -1067,13 +1068,13 @@ public:
 
             cout << Interfaz::AZUL
                  << "==================================================\n"
-                 << "       SISTEMA DE DETECCION Y EXTINCION\n"
-                 << "                    DE MOTOR\n"
+                 << "       SISTEMA DE DETECCIÓN Y EXTINCIÓN\n"
+                 << "                    DE INCENDIOS\n"
                  << "==================================================\n"
                  << Interfaz::RESET;
 
             cout << "\n";
-            cout << "1. Iniciar / monitorear simulacion\n";
+            cout << "1. Iniciar / monitorear simulación\n";
             cout << "2. Mostrar estado actual del motor\n";
             cout << "3. Disparar Botella A (SQUIB A)\n";
             cout << "4. Disparar Botella B (SQUIB B)\n";
@@ -1082,7 +1083,7 @@ public:
             cout << "7. Ver historial de eventos\n";
             cout << "8. Salir\n";
 
-            cout << "\nSeleccione una opcion: ";
+            cout << "\nSeleccione una opción: ";
 
             try
             {
@@ -1097,7 +1098,7 @@ public:
                     );
 
                     throw ExcepcionSistema(
-                        "Opcion no valida. Debe introducir un numero entero."
+                        "Opción no válida. Debe introducir un número entero."
                     );
                 }
 
@@ -1141,7 +1142,7 @@ public:
 
                     default:
                         throw ExcepcionSistema(
-                            "Opcion no valida."
+                            "Opción no válida."
                         );
                 }
             }
@@ -1162,6 +1163,8 @@ public:
 
 int main()
 {
+    setlocale(LC_CTYPE, "Spanish"); 
+
     try
     {
         SistemaAvion sistema;
